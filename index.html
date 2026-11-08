@@ -1137,11 +1137,12 @@ async function requestDiraAction() {
       diraPlan=fallbackDiraPlan(state);
       diraAiFailures++;
       const rawPreview=String(raw||'(kosong)').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).slice(0,140);
-      log('⚠️ Gemma raw: '+rawPreview);
+      log('⚠️ AI raw: '+rawPreview);
       diraAiDisabled=diraAiFailures>=DIRA_AI_MAX_FAILURES;
+      const providerName=currentDiraProvider()==='grok'?'Grok':'Gemma';
       setAIStatus("fallback", diraAiDisabled
-        ? "Gemma gagal 3 kali. Raw: "+rawPreview
-        : "jawaban belum cocok ("+diraAiFailures+"/3). Raw: "+rawPreview);
+        ? providerName+" gagal 3 kali. Raw: "+rawPreview
+        : providerName+" memberi format yang belum cocok ("+diraAiFailures+"/3). Raw: "+rawPreview);
       return;
     }
     if(action==='hunt_boss'&&!boss)action='hunt_nearest';
