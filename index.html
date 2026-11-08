@@ -49,6 +49,8 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 #hud{position:absolute;left:8px;right:8px;top:8px;display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000;pointer-events:none}
 #hud .l{display:flex;flex-direction:column;gap:2px}
 #menuBtn{pointer-events:auto;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:10px;padding:4px 10px;font:inherit;font-size:14px;cursor:pointer}
+#diraModeBtn{pointer-events:auto;background:rgba(10,35,30,.82);border:1px solid rgba(143,240,176,.65);color:#caffd9;border-radius:10px;padding:5px 9px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;touch-action:manipulation}
+#diraModeBtn.off{background:rgba(55,20,28,.82);border-color:rgba(255,91,110,.65);color:#ffc3cb}
 #killBar{position:absolute;left:8px;right:8px;top:70px;height:6px;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden;pointer-events:none}
 #killBar i{display:block;height:100%;width:0;background:var(--ok)}
 #bub{position:absolute;background:#fff;color:#0a1830;font-size:12px;font-weight:700;padding:5px 9px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;transform:translate(-50%,-100%);max-width:200px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4);border-left:3px solid var(--acc)}
@@ -179,7 +181,7 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
       <canvas id="cv"></canvas>
       <div id="hud">
         <div class="l"><span id="hStage"></span><span id="hLvl"></span></div>
-        <button id="menuBtn" onclick="quitBattle()">☰</button>
+        <div style="display:flex;gap:6px;pointer-events:auto"><button id="diraModeBtn" onclick="toggleDiraAI()">🤖 AI: ON</button><button id="menuBtn" onclick="quitBattle()">☰</button></div>
       </div>
       <div id="killBar"><i id="kbFill"></i></div>
       <div id="bub"></div>
@@ -221,7 +223,7 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 /* ===== KONEKSI (sama dengan Rumah Mungil) ===== */
 function apiRoot() { return document.getElementById('serverUrl').value.trim().replace(/\/+$/, ''); }
 
-async function askLocalAI(messages) {
+async function askLocalAI(messages, maxTokens = 40) {
   const res = await fetch(apiRoot() + '/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -229,7 +231,7 @@ async function askLocalAI(messages) {
       model: 'default',
       messages: messages,
       stream: false,
-      max_tokens: 40
+      max_tokens: maxTokens
     })
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -648,6 +650,10 @@ let bombs = 1, lowWarned = false, touching = false, tx = 0, ty = 0;
 let bossSpawned = false, bossIdx = 0, wonStage = false, lostStage = false;
 let runXp = 0;
 let cmd = 'ikuti';
+// Hybrid: AI memilih tindakan sendiri; perintah manual mendapat prioritas sementara.
+let diraAiEnabled = true, diraAiCmd = 'ikuti', diraAiBusy = false;
+let diraAiLastRequest = 0, diraManualUntil = 0, diraAiProtectUntil = 0;
+const DIRA_AI_INTERVAL = 9000, DIRA_MANUAL_OVERRIDE = 12000;
 let swarm = { state: 'idle', timer: 0, left: 0, done: false };
 let trail = [];
 let parts = [];
@@ -702,7 +708,10 @@ function startStage(n) {
   bombs = 1;
   bossSpawned = false; bossDone = false; bossIdx = Math.floor(n / 5) - 1;
   wonStage = false; lostStage = false; paused = false; started = true;
-  cmd = 'ikuti'; highlightCmd();
+  cmd = 'ikuti';
+  diraAiCmd = 'ikuti'; diraAiProtectUntil = 0; diraManualUntil = 0;
+  diraAiLastRequest = 0; diraAiBusy = false;
+  highlightCmd();
   swarm = { state: 'idle', timer: 0, left: 0, done: false };
   setTension(false);
   runXp = 0;
@@ -815,15 +824,17 @@ function update(dt) {
   dira.t += dt;
   const threat = eBullets.some(b => b.vy > 0 && b.y < pl.y && b.y > pl.y - 170 && Math.abs(b.x - pl.x) < 36);
   let gx, gy;
-  const bossCmd = cmd === 'boss' && boss;
-  if (threat) {
+  const activeCmd = activeDiraCommand();
+  const aiProtect = diraAiEnabled && Date.now() >= diraManualUntil && Date.now() < diraAiProtectUntil;
+  const bossCmd = activeCmd === 'boss' && boss;
+  if (threat || aiProtect) {
     gx = pl.x; gy = pl.y - 40;
     if (!flags.shield) { flags.shield = true; dirEvent('Dira pasang badan di depan pesawat', false); log('🛡️ Dira pasang badan'); }
-  } else if (cmd === 'kiri') {
+  } else if (activeCmd === 'kiri') {
     gx = pl.x - 52; gy = pl.y + 26; flags.shield = false;
-  } else if (cmd === 'kanan') {
+  } else if (activeCmd === 'kanan') {
     gx = pl.x + 52; gy = pl.y + 26; flags.shield = false;
-  } else if (cmd === 'tengah') {
+  } else if (activeCmd === 'tengah') {
     gx = W / 2; gy = H * 0.45; flags.shield = false;
   } else if (bossCmd) {
     const a = dira.t * 0.8;
@@ -998,6 +1009,7 @@ function update(dt) {
 
   renderHud();
   flushDira();
+  requestDiraAction();
 }
 
 let bossDone = false;
@@ -1016,8 +1028,113 @@ function bossDown() {
   dirEvent(`boss ${name} berhasil dihancurkan`, true);
 }
 
+const SYS_DIRA_ACTION = [
+  'You are the autonomous wingman in a vertical shooter game.',
+  'Read the game state and choose exactly one useful action.',
+  'Allowed actions: follow, left, center, right, attack_boss, protect.',
+  'Use attack_boss only when a boss is present. Use protect when the player is in danger.',
+  'Return ONLY one JSON object: {"action":"follow|left|center|right|attack_boss|protect","reason":"short reason"}.',
+  'Do not invent targets, coordinates, weapons, or actions. The game validates and executes your choice.'
+].join(' ');
+
+function parseDiraAction(raw) {
+  const text = String(raw || '').replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  const start = text.indexOf('{'), end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    const obj = JSON.parse(text.slice(start, end + 1));
+    const allowed = ['follow', 'left', 'center', 'right', 'attack_boss', 'protect'];
+    return obj && allowed.includes(String(obj.action || '').toLowerCase())
+      ? { action: String(obj.action).toLowerCase(), reason: String(obj.reason || '').slice(0, 80) }
+      : null;
+  } catch (e) { return null; }
+}
+
+function diraGameState() {
+  const nearest = enemies.length
+    ? enemies.reduce((best, en) => !best || dist(en, pl) < dist(best, pl) ? en : best, null)
+    : null;
+  const incoming = eBullets.filter(b => b.vy > 0 && b.y < pl.y && b.y > pl.y - 190 && Math.abs(b.x - pl.x) < 90).length;
+  return {
+    stage,
+    player: {
+      hp_percent: Math.round(clamp(pl.hp / pl.max, 0, 1) * 100),
+      x_zone: pl.x < W / 3 ? 'left' : pl.x > W * 2 / 3 ? 'right' : 'center',
+      incoming_bullets_nearby: incoming
+    },
+    enemies: { count: enemies.length, nearest_type: nearest ? nearest.type : 'none', nearest_distance: nearest ? Math.round(dist(nearest, pl)) : null },
+    boss: boss ? { present: true, hp_percent: Math.round(clamp(boss.hp / boss.max, 0, 1) * 100) } : { present: false },
+    enemy_bullets: eBullets.length,
+    current_manual_order: Date.now() < diraManualUntil ? cmd : 'none'
+  };
+}
+
+async function requestDiraAction() {
+  if (!diraAiEnabled || !inBattle || !started || paused || wonStage || lostStage) return;
+  if (diraAiBusy || aiBusy || chatBusy || Date.now() - diraAiLastRequest < DIRA_AI_INTERVAL) return;
+  if (Date.now() < diraManualUntil) return;
+  diraAiBusy = true;
+  diraAiLastRequest = Date.now();
+  try {
+    const state = diraGameState();
+    const raw = await askLocalAI([
+      { role: 'system', content: SYS_DIRA_ACTION },
+      { role: 'user', content: 'Choose the next wingman action for this game state.\nGAME_STATE: ' + JSON.stringify(state) }
+    ], 100);
+    if (!inBattle || !started || wonStage || lostStage || !diraAiEnabled || Date.now() < diraManualUntil) return;
+    const decision = parseDiraAction(raw);
+    if (!decision) {
+      console.warn('Dira action output was not valid JSON:', raw);
+      return;
+    }
+    const map = { follow: 'ikuti', left: 'kiri', center: 'tengah', right: 'kanan', attack_boss: 'boss' };
+    if (decision.action === 'attack_boss' && !boss) decision.action = 'follow';
+    if (decision.action === 'protect') {
+      diraAiProtectUntil = Date.now() + 4500;
+      diraAiCmd = 'ikuti';
+    } else {
+      diraAiProtectUntil = 0;
+      diraAiCmd = map[decision.action] || 'ikuti';
+    }
+    highlightCmd();
+    log('🤖 Dira AI: ' + decision.action + (decision.reason ? ' · ' + decision.reason : ''));
+  } catch (e) {
+    console.warn('Dira action request failed:', e);
+  } finally {
+    diraAiBusy = false;
+  }
+}
+
+function activeDiraCommand() {
+  return diraAiEnabled && Date.now() >= diraManualUntil ? diraAiCmd : cmd;
+}
+
+function updateDiraModeUI() {
+  const b = document.getElementById('diraModeBtn');
+  if (!b) return;
+  b.textContent = diraAiEnabled ? '🤖 AI: ON' : '✋ AI: OFF';
+  b.classList.toggle('off', !diraAiEnabled);
+  b.title = diraAiEnabled ? 'AI aktif; tombol manual mengambil alih selama 12 detik' : 'Mode manual; tekan untuk mengaktifkan AI';
+}
+
+function toggleDiraAI() {
+  diraAiEnabled = !diraAiEnabled;
+  diraManualUntil = 0;
+  if (diraAiEnabled) {
+    diraAiLastRequest = 0;
+    log('🤖 Dira mengambil keputusan sendiri. Perintah manual tetap bisa dipakai.');
+  } else {
+    diraAiProtectUntil = 0;
+    log('✋ Mode manual aktif. Dira menunggu tombol perintah.');
+  }
+  updateDiraModeUI();
+  highlightCmd();
+}
+
 function highlightCmd() {
-  document.querySelectorAll('.cmd').forEach(b => b.classList.toggle('on', b.dataset.cmd === cmd));
+  const active = activeDiraCommand();
+  document.querySelectorAll('.cmd').forEach(b => b.classList.toggle('on', b.dataset.cmd === active));
+  updateDiraModeUI();
 }
 
 const CMD_LABEL = { kiri: 'kiri', tengah: 'tengah', kanan: 'kanan', ikuti: 'ikuti', boss: 'serang bos' };
@@ -1030,8 +1147,9 @@ function setCmd(c) {
     return;
   }
   cmd = c;
+  if (diraAiEnabled) diraManualUntil = Date.now() + DIRA_MANUAL_OVERRIDE;
   highlightCmd();
-  log(`🎖️ Perintah: ${CMD_LABEL[c]}`);
+  log(`🎖️ Perintah manual: ${CMD_LABEL[c]}${diraAiEnabled ? ' (prioritas 12 detik)' : ''}`);
   dirEvent(`perintah ${CMD_LABEL[c]} diterima`, true);
 }
 
