@@ -259,7 +259,9 @@ async function testGrok() {
     if (!models.length) throw new Error('Key diterima, tetapi daftar model Grok kosong/tidak tersedia');
     const modelInput = document.getElementById('grokModel');
     if (!modelInput.value.trim()) modelInput.value = models[0];
-    setAIStatus('online', 'Grok · ' + modelInput.value.trim());
+    const probe = await askGrokAI([{role:'user',content:'Reply with exactly this text: hunt_nearest'}],8);
+    setAIStatus('online', 'Grok · ' + modelInput.value.trim() + ' · respons OK');
+    log('☁️ Tes Grok berhasil: ' + String(probe).slice(0,90));
     return true;
   } catch (e) {
     setAIStatus('offline', e.message || 'Gagal menghubungi Grok');
