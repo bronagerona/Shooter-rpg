@@ -193,16 +193,25 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 function apiRoot() { return document.getElementById('serverUrl').value.trim().replace(/\/+$/, ''); }
 
 async function askLocalAI(messages, maxTokens = 40) {
-  const res = await fetch(apiRoot() + '/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'default',
-      messages: messages,
-      stream: false,
-      max_tokens: maxTokens
-    })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  let res;
+  try {
+    res = await fetch(apiRoot() + '/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: 'default',
+        messages: messages,
+        stream: false,
+        max_tokens: maxTokens
+      })
+    });
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Waktu tunggu Gemma habis (25 detik)");
+    throw e;
+  } finally { clearTimeout(timeout); }
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
   return data?.choices?.[0]?.message?.content || '';
@@ -213,9 +222,11 @@ function setAIStatus(state, detail = "") {
   const battle = document.getElementById("aiBattleStatus");
   const info = {
     checking: ["Menguji server AI...", "AI Dira: MEMERIKSA", "busy"],
-    busy: ["Gemma sedang berpikir...", "AI Dira: BERPIKIR…", "busy"],
-    online: ["Terhubung ✓ Model: " + (detail || "default"), "AI Dira: TERHUBUNG ✓", "online"],
-    offline: ["Gagal koneksi: " + (detail || "server tidak merespons"), "AI Dira: TERPUTUS ✕", "offline"]
+    busy: ["Gemma sedang berpikir...", "AI Dira: MENUNGGU GEMMA…", "busy"],
+    decision: ["Gemma memilih aksi: " + (detail || "aksi diterima"), "AI MEMILIH: " + (detail || "AKSI DITERIMA"), "online"],
+    fallback: ["Strategi cadangan aktif: " + (detail || "jawaban AI tidak valid"), "MODE CADANGAN ⚙", "offline"],
+    online: ["Server terhubung ✓ Model: " + (detail || "default"), "SERVER: TERHUBUNG ✓", "online"],
+    offline: ["Gagal koneksi: " + (detail || "server tidak merespons"), "SERVER: TERPUTUS ✕", "offline"]
   }[state];
   if (!info) return;
   if (menu) { menu.textContent = info[0]; menu.style.color = state === "online" ? "#8ff0b0" : state === "offline" ? "#ff8a8a" : "#ffd166"; }
@@ -974,13 +985,21 @@ async function requestDiraAction() {
     const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your own next tactical goal. GAME_STATE: '+JSON.stringify(state)}],80);
     setAIStatus("online");
     if(!inBattle||!started||wonStage||lostStage)return;
-    let action=parseDiraAction(raw); if(!action)action=fallbackDiraPlan(state);
+    let action=parseDiraAction(raw);
+    if(!action) {
+      diraPlan=fallbackDiraPlan(state);
+      setAIStatus("fallback", "format jawaban Gemma tidak valid");
+      return;
+    }
     if(action==='hunt_boss'&&!boss)action='hunt_nearest';
     if(action==='collect_item'&&!items.length)action=fallbackDiraPlan(state);
     if(action==='evade_fire'&&!state.threats.nearby_enemy_bullets)action=fallbackDiraPlan(state);
     diraPlan=action; if(action==='sweep')diraSweepDir*=-1;
+    setAIStatus("decision", action.toUpperCase());
   } catch(e) {
-    console.warn('Dira autonomous decision failed:',e); setAIStatus("offline", e.message); diraPlan=fallbackDiraPlan(state);
+    console.warn('Dira autonomous decision failed:',e);
+    diraPlan=fallbackDiraPlan(state);
+    setAIStatus("fallback", e.message);
   } finally { diraAiBusy=false; }
 }
 
