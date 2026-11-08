@@ -834,7 +834,7 @@ function update(dt) {
   // Item jatuh
   for (const it of items) it.y += it.vy * dt;
   for (const it of items) {
-    if (dist(it, pl) < 30) {
+    if (dist(it, pl) < 30 || dist(it, dira) < 30) {
       sfx('pick');
       if (it.ic === '🔋') { pl.power = Math.min(3, pl.power + 1); log('🔋 Senjata naik level'); }
       else { bombs++; log('💣 Dapat bom'); }
