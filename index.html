@@ -98,12 +98,27 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
     <button class="btn" onclick="openKarakterScreen()">🧑‍✈️ Karakter<small>Info stat pesawat dan wingman</small></button>
     <button class="btn" onclick="openUpgrade()">⬆️ Upgrade<small>Bagikan poin stat</small></button>
     <div class="card" style="margin-top:14px">
-      <div style="font-size:12px;color:var(--mut)">Server AI</div>
-      <div class="chatrow" style="margin-top:4px">
-        <input type="text" id="serverUrl" value="http://127.0.0.1:11434" placeholder="URL Server AI">
-        <button onclick="testAI()">Tes</button>
+      <div style="font-size:12px;color:var(--mut)">AI Dira · Pilih penyedia keputusan</div>
+      <select id="diraProvider" class="btn" style="margin-top:5px;width:100%;touch-action:manipulation" onchange="updateDiraProviderUI()">
+        <option value="local">Gemma Lokal (llama.cpp)</option>
+        <option value="grok">Grok Cloud API</option>
+      </select>
+      <div id="localAIConfig">
+        <div style="font-size:12px;color:var(--mut);margin-top:8px">URL server lokal</div>
+        <div class="chatrow" style="margin-top:4px">
+          <input type="text" id="serverUrl" value="http://127.0.0.1:11434" placeholder="URL Server AI">
+          <button onclick="testAI()">Tes</button>
+        </div>
       </div>
-      <div id="aiStatus" style="font-size:12px;color:var(--mut);margin-top:6px">Status AI: Belum teruji</div>
+      <div id="grokAIConfig" style="display:none;margin-top:8px">
+        <div style="font-size:12px;color:var(--mut)">Grok API key (hanya tersimpan selama halaman terbuka)</div>
+        <input type="password" id="grokApiKey" autocomplete="off" placeholder="Tempel API key Grok" style="width:100%;margin-top:4px">
+        <div style="font-size:12px;color:var(--mut);margin-top:8px">Model ID (isi otomatis saat Tes Grok)</div>
+        <input type="text" id="grokModel" placeholder="Model dari akun API kamu" style="width:100%;margin-top:4px">
+        <button class="btn" style="margin-top:6px" onclick="testGrok()">Tes Grok & cari model</button>
+        <div style="font-size:11px;color:var(--mut);margin-top:5px">Key tidak disimpan ke GitHub atau penyimpanan browser. Jangan bagikan file HTML yang berisi key.</div>
+      </div>
+      <div id="aiStatus" style="font-size:12px;color:var(--mut);margin-top:8px">Status AI: Belum teruji</div>
     </div>
   </div>
 
@@ -189,8 +204,68 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 </div>
 
 <script>
-/* ===== KONEKSI (sama dengan Rumah Mungil) ===== */
+/* ===== KONEKSI AI LOKAL + GROK CLOUD ===== */
 function apiRoot() { return document.getElementById('serverUrl').value.trim().replace(/\/+$/, ''); }
+function updateDiraProviderUI() {
+  const cloud = document.getElementById('diraProvider')?.value === 'grok';
+  document.getElementById('localAIConfig').style.display = cloud ? 'none' : 'block';
+  document.getElementById('grokAIConfig').style.display = cloud ? 'block' : 'none';
+}
+function currentDiraProvider() { return document.getElementById('diraProvider')?.value || 'local'; }
+
+async function askGrokAI(messages, maxTokens = 32) {
+  const key = document.getElementById('grokApiKey')?.value.trim();
+  const model = document.getElementById('grokModel')?.value.trim();
+  if (!key) throw new Error('Masukkan API key Grok terlebih dahulu');
+  if (!model) throw new Error('Tekan Tes Grok untuk mengambil model dari akunmu');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      signal: controller.signal,
+      body: JSON.stringify({ model, messages, stream: false, max_tokens: maxTokens, temperature: 0.2 })
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.text()).slice(0,220); } catch(e) {}
+      throw new Error('Grok HTTP ' + res.status + (detail ? ': ' + detail : ''));
+    }
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content === 'string' && content.trim()) return content.trim();
+    throw new Error('Grok mengirim respons kosong');
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Grok tidak merespons dalam 20 detik');
+    if (e instanceof TypeError) throw new Error('Koneksi Grok gagal. Bisa jadi browser memblokir CORS atau jaringan bermasalah.');
+    throw e;
+  } finally { clearTimeout(timeout); }
+}
+
+async function testGrok() {
+  const key = document.getElementById('grokApiKey')?.value.trim();
+  if (!key) { setAIStatus('offline', 'Masukkan API key Grok'); return false; }
+  setAIStatus('checking');
+  try {
+    const res = await fetch('https://api.x.ai/v1/models', { headers: { 'Authorization': 'Bearer ' + key } });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.text()).slice(0,180); } catch(e) {}
+      throw new Error('Grok HTTP ' + res.status + (detail ? ': ' + detail : ''));
+    }
+    const data = await res.json();
+    const models = (data?.data || []).map(x => x.id).filter(x => typeof x === 'string' && x.toLowerCase().includes('grok'));
+    if (!models.length) throw new Error('Key diterima, tetapi daftar model Grok kosong/tidak tersedia');
+    const modelInput = document.getElementById('grokModel');
+    if (!modelInput.value.trim()) modelInput.value = models[0];
+    setAIStatus('online', 'Grok · ' + modelInput.value.trim());
+    return true;
+  } catch (e) {
+    setAIStatus('offline', e.message || 'Gagal menghubungi Grok');
+    return false;
+  }
+}
 
 async function askLocalAI(messages, maxTokens = 12) {
   const controller = new AbortController();
@@ -248,9 +323,9 @@ function setAIStatus(state, detail = "") {
   const menu = document.getElementById("aiStatus");
   const battle = document.getElementById("aiBattleStatus");
   const info = {
-    checking: ["Menguji server AI...", "AI Dira: MEMERIKSA", "busy"],
-    busy: ["Gemma sedang berpikir...", "AI Dira: MENUNGGU GEMMA…", "busy"],
-    decision: ["Gemma memilih aksi: " + (detail || "aksi diterima"), "AI MEMILIH: " + (detail || "AKSI DITERIMA"), "online"],
+    checking: ["Menguji penyedia AI...", "AI Dira: MEMERIKSA", "busy"],
+    busy: ["AI Dira sedang berpikir...", "AI Dira: MENENTUKAN AKSI…", "busy"],
+    decision: ["AI memilih aksi: " + (detail || "aksi diterima"), "AI MEMILIH: " + (detail || "AKSI DITERIMA"), "online"],
     fallback: ["Strategi cadangan aktif: " + (detail || "jawaban AI tidak valid"), "MODE CADANGAN ⚙", "offline"],
     online: ["Server terhubung ✓ Model: " + (detail || "default"), "SERVER: TERHUBUNG ✓", "online"],
     offline: ["Gagal koneksi: " + (detail || "server tidak merespons"), "SERVER: TERPUTUS ✕", "offline"]
@@ -1050,7 +1125,10 @@ async function requestDiraAction() {
   diraAiBusy=true; diraAiLastRequest=Date.now(); const state=diraGameState();
   setAIStatus("busy");
   try {
-    const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your next tactical action for this current game state. Return one action code only. GAME_STATE: '+JSON.stringify(state)}],32);
+    const messages=[{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your next tactical action for this current game state. Return one action code only. GAME_STATE: '+JSON.stringify(state)}];
+    const raw=currentDiraProvider()==='grok'
+      ? await askGrokAI(messages,32)
+      : await askLocalAI(messages,32);
     if(!inBattle||!started||wonStage||lostStage)return;
     let action=parseDiraAction(raw);
     if(!action) {
@@ -1076,7 +1154,7 @@ async function requestDiraAction() {
     diraAiFailures++;
     diraAiDisabled=diraAiFailures>=DIRA_AI_MAX_FAILURES;
     setAIStatus("fallback", diraAiDisabled
-      ? "Gemma gagal 3 kali — AI dijeda sampai stage berikutnya"
+      ? (currentDiraProvider()==='grok' ? "Grok gagal 3 kali — AI dijeda sampai stage berikutnya" : "Gemma gagal 3 kali — AI dijeda sampai stage berikutnya")
       : (e.message+" ("+diraAiFailures+"/3)"));
   } finally { diraAiBusy=false; }
 }
