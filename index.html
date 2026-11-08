@@ -598,7 +598,6 @@ function startStage(n) {
   document.getElementById('overLost').classList.remove('show');
   document.getElementById('overWin').classList.remove('show');
   document.getElementById('log').innerHTML = '';
-  pendingEv = null;
 
   log(`🌊 Stage ${n}: ${stageName(n)}`);
   if (n % 5 === 0) spawnBoss();
@@ -898,7 +897,6 @@ function update(dt) {
 }
 
 let bossDone = false;
-const flags = { shield: false };
 
 function bossDown() {
   const name = boss.n;
@@ -1181,13 +1179,6 @@ function draw() {
   ctx.globalAlpha = 1;
   drawHpBar(pl.x, pl.y + 30, 40, pl.hp / pl.max, '#4cc2ff');
 
-  positionBubble();
-}
-
-function positionBubble() {
-  const b = document.getElementById('bub');
-  b.style.left = dira.x + 'px';
-  b.style.top = (dira.y - 30) + 'px';
 }
 
 function renderHud() {
@@ -1224,8 +1215,6 @@ window.addEventListener('pointercancel', endTouch);
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
   if (e.key === ' ') useBomb();
-  const map = { '1': 'kiri', '2': 'tengah', '3': 'kanan', '4': 'ikuti', '5': 'boss' };
-  if (map[e.key]) setCmd(map[e.key]);
 });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
