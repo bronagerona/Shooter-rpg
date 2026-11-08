@@ -565,8 +565,10 @@ let bombs = 1, lowWarned = false, touching = false, tx = 0, ty = 0;
 let bossSpawned = false, bossIdx = 0, wonStage = false, lostStage = false;
 let runXp = 0;
 let diraAiBusy = false, diraAiLastRequest = 0;
+let diraAiFailures = 0, diraAiDisabled = false;
 let diraPlan = 'hunt_nearest', diraSweepDir = 1;
 const DIRA_AI_INTERVAL = 6500;
+const DIRA_AI_MAX_FAILURES = 3;
 let swarm = { state: 'idle', timer: 0, left: 0, done: false };
 let trail = [];
 let parts = [];
@@ -623,7 +625,7 @@ function startStage(n) {
   bombs = 1;
   bossSpawned = false; bossDone = false; bossIdx = Math.floor(n / 5) - 1;
   wonStage = false; lostStage = false; paused = false; started = true;
-  diraPlan = 'hunt_nearest'; diraAiLastRequest = 0; diraAiBusy = false; diraSweepDir = 1;
+  diraPlan = 'hunt_nearest'; diraAiLastRequest = 0; diraAiBusy = false; diraAiFailures = 0; diraAiDisabled = false; diraSweepDir = 1;
   swarm = { state: 'idle', timer: 0, left: 0, done: false };
   setTension(false);
   runXp = 0;
@@ -979,7 +981,7 @@ function fallbackDiraPlan(state) {
   return options[Math.floor(Math.random()*options.length)]||'hunt_nearest';
 }
 async function requestDiraAction() {
-  if(!inBattle||!started||paused||wonStage||lostStage)return;
+  if(!inBattle||!started||paused||wonStage||lostStage||diraAiDisabled)return;
   if(diraAiBusy||Date.now()-diraAiLastRequest<DIRA_AI_INTERVAL)return;
   diraAiBusy=true; diraAiLastRequest=Date.now(); const state=diraGameState();
   setAIStatus("busy");
@@ -989,18 +991,27 @@ async function requestDiraAction() {
     let action=parseDiraAction(raw);
     if(!action) {
       diraPlan=fallbackDiraPlan(state);
-      setAIStatus("fallback", "format jawaban Gemma tidak valid");
+      diraAiFailures++;
+      diraAiDisabled=diraAiFailures>=DIRA_AI_MAX_FAILURES;
+      setAIStatus("fallback", diraAiDisabled
+        ? "Gemma gagal 3 kali — AI dijeda sampai stage berikutnya"
+        : "format jawaban tidak valid ("+diraAiFailures+"/3)");
       return;
     }
     if(action==='hunt_boss'&&!boss)action='hunt_nearest';
     if(action==='collect_item'&&!items.length)action=fallbackDiraPlan(state);
     if(action==='evade_fire'&&!state.threats.nearby_enemy_bullets)action=fallbackDiraPlan(state);
+    diraAiFailures=0;
     diraPlan=action; if(action==='sweep')diraSweepDir*=-1;
     setAIStatus("decision", action.toUpperCase());
   } catch(e) {
     console.warn('Dira autonomous decision failed:',e);
     diraPlan=fallbackDiraPlan(state);
-    setAIStatus("fallback", e.message);
+    diraAiFailures++;
+    diraAiDisabled=diraAiFailures>=DIRA_AI_MAX_FAILURES;
+    setAIStatus("fallback", diraAiDisabled
+      ? "Gemma gagal 3 kali — AI dijeda sampai stage berikutnya"
+      : (e.message+" ("+diraAiFailures+"/3)"));
   } finally { diraAiBusy=false; }
 }
 
