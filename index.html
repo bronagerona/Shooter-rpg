@@ -956,11 +956,12 @@ function bossDown() {
 
 const DIRA_ACTIONS = ['hunt_nearest','hunt_strongest','flank_left','flank_right','sweep','hunt_boss','collect_item','evade_fire'];
 const SYS_DIRA_ACTION = [
-  'Kamu adalah pilot wingman mandiri di game tembak pesawat.',
-  'Kamu punya tujuan sendiri. Jangan mengikuti, mengawal, melindungi, atau menunggu pemain.',
-  'Pilih SATU aksi terbaik dari daftar ini: ' + DIRA_ACTIONS.join(', ') + '.',
-  'Aturan: hunt_boss hanya jika boss.present true; collect_item hanya jika items lebih dari 0; evade_fire hanya jika nearby_enemy_bullets lebih dari 0.',
-  'Balas HANYA dengan satu kode aksi persis dari daftar. Tanpa JSON, tanpa penjelasan, tanpa tanda baca.'
+  'You are Dira, an autonomous fighter pilot in a vertical shooter game.',
+  'You are an independent wingman with your own mission. NEVER follow, escort, protect, or wait for the player. Make your own tactical decisions.',
+  'Choose exactly ONE best action from this list: ' + DIRA_ACTIONS.join(', ') + '.',
+  'Rules: choose hunt_boss only when boss.present is true; choose collect_item only when items is greater than 0; choose evade_fire only when nearby_enemy_bullets is greater than 0.',
+  'Use the game state provided by the user. Prefer attacking dangerous enemies, but collect items when useful and evade only when bullets are nearby.',
+  'OUTPUT FORMAT: Return only the exact action code, for example: hunt_nearest. Do not return JSON, explanations, markdown, quotes, or any other words.'
 ].join(' ');
 
 function parseDiraAction(raw) {
@@ -1003,7 +1004,7 @@ async function requestDiraAction() {
   diraAiBusy=true; diraAiLastRequest=Date.now(); const state=diraGameState();
   setAIStatus("busy");
   try {
-    const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Pilih aksi untuk kondisi game ini: '+JSON.stringify(state)}],12);
+    const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your next tactical action for this current game state. Return one action code only. GAME_STATE: '+JSON.stringify(state)}],12);
     if(!inBattle||!started||wonStage||lostStage)return;
     let action=parseDiraAction(raw);
     if(!action) {
