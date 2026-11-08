@@ -216,10 +216,25 @@ async function askLocalAI(messages, maxTokens = 12) {
     }
     // Timeout tetap aktif sampai seluruh body JSON selesai dibaca.
     const data = await res.json();
-    const message = data?.choices?.[0]?.message;
-    const content = typeof message?.content === 'string' ? message.content :
-      Array.isArray(message?.content) ? message.content.map(x => x?.text || '').join(' ') : '';
-    return content || data?.choices?.[0]?.text || '';
+    const choice = data?.choices?.[0] || {};
+    const message = choice.message || {};
+    const readText = value => {
+      if (typeof value === 'string') return value;
+      if (Array.isArray(value)) return value.map(readText).filter(Boolean).join(' ');
+      if (value && typeof value === 'object') return readText(value.text || value.content || value.value || '');
+      return '';
+    };
+    // Beberapa build llama.cpp/Gemma menaruh teks di field selain message.content.
+    const content = [
+      message.content, message.reasoning_content, message.analysis,
+      message.reasoning, choice.text
+    ].map(readText).filter(Boolean).join('\n').trim();
+    if (content) return content;
+    throw new Error('Respons model kosong/tidak berisi teks: ' + JSON.stringify({
+      finish_reason: choice.finish_reason || null,
+      message_keys: Object.keys(message),
+      response_keys: Object.keys(data || {})
+    }).slice(0, 220));
   } catch (e) {
     if (e.name === "AbortError") throw new Error("Gemma tidak selesai menjawab dalam 25 detik");
     throw e;
@@ -965,15 +980,29 @@ const SYS_DIRA_ACTION = [
 ].join(' ');
 
 function parseDiraAction(raw) {
-  const s=String(raw||'').toLowerCase().replace(/```(?:json)?/gi,'').replace(/```/g,'').trim();
+  const s=String(raw||'').toLowerCase()
+    .replace(/```(?:json)?/gi,'').replace(/```/g,'')
+    .replace(/[-\\s]+/g,'_').trim();
   for (const action of DIRA_ACTIONS) {
     if (new RegExp('(^|[^a-z_])'+action+'([^a-z_]|$)','i').test(s)) return action;
   }
+  // Accept short natural-language answers too, not only exact action codes.
+  const aliases = [
+    [/\\b(nearest|closest)_enemy\\b|\\battack_nearest\\b|\\btarget_nearest\\b/, 'hunt_nearest'],
+    [/\\b(strongest|toughest|most_dangerous)_enemy\\b|\\battack_strongest\\b/, 'hunt_strongest'],
+    [/\\b(left_flank|flank_left)\\b/, 'flank_left'],
+    [/\\b(right_flank|flank_right)\\b/, 'flank_right'],
+    [/\\bsweep\\b/, 'sweep'],
+    [/\\b(hunt|attack|target)_boss\\b/, 'hunt_boss'],
+    [/\\b(collect|pick_up)_?(item|items|power_up)\\b/, 'collect_item'],
+    [/\\b(dodge|evade|avoid)_?(enemy_)?(fire|bullets)\\b|\\bincoming_bullets\\b/, 'evade_fire']
+  ];
+  for (const [pattern, action] of aliases) if (pattern.test(s)) return action;
   try {
     const a=s.indexOf('{'), b=s.lastIndexOf('}');
     if(a>=0&&b>a) {
       const o=JSON.parse(s.slice(a,b+1));
-      const action=String(o?.action||'').toLowerCase();
+      const action=String(o?.action||'').toLowerCase().replace(/[-\\s]+/g,'_');
       if(DIRA_ACTIONS.includes(action)) return action;
     }
   } catch(e) {}
@@ -1010,11 +1039,12 @@ async function requestDiraAction() {
     if(!action) {
       diraPlan=fallbackDiraPlan(state);
       diraAiFailures++;
-      log('⚠️ Jawaban Gemma tidak dikenali: '+String(raw||'(kosong)').slice(0,100));
+      const rawPreview=String(raw||'(kosong)').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).slice(0,140);
+      log('⚠️ Gemma raw: '+rawPreview);
       diraAiDisabled=diraAiFailures>=DIRA_AI_MAX_FAILURES;
       setAIStatus("fallback", diraAiDisabled
-        ? "Gemma gagal 3 kali — AI dijeda sampai stage berikutnya"
-        : "format jawaban tidak valid ("+diraAiFailures+"/3)");
+        ? "Gemma gagal 3 kali. Raw: "+rawPreview
+        : "jawaban belum cocok ("+diraAiFailures+"/3). Raw: "+rawPreview);
       return;
     }
     if(action==='hunt_boss'&&!boss)action='hunt_nearest';
