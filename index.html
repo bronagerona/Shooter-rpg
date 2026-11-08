@@ -31,12 +31,6 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 .st.cur{border-color:var(--acc);box-shadow:0 0 8px rgba(76,194,255,.4)}
 .st:disabled{opacity:.35}
 .zone{font-size:12px;color:var(--mut);margin-top:12px;font-weight:700}
-#chatLog{flex:1;min-height:200px;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:14px;line-height:1.5;margin-top:8px}
-#chatLog div{margin-bottom:6px}
-.chatrow{display:flex;gap:6px;margin-top:8px}
-.chatrow input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--ink);font:inherit;font-size:14px;-webkit-user-select:text;user-select:text}
-.chatrow button{background:var(--acc);color:#04111f;border:0;border-radius:10px;padding:0 16px;font:inherit;font-weight:700;cursor:pointer}
-.chatrow button:disabled{opacity:.5}
 .pts{font-size:14px;color:#ffd166;font-weight:700;text-align:center;margin:6px 0}
 .statrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;background:#16294a;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}
 .statrow small{display:block;color:var(--mut);font-size:12px}
@@ -49,12 +43,8 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 #hud{position:absolute;left:8px;right:8px;top:8px;display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000;pointer-events:none}
 #hud .l{display:flex;flex-direction:column;gap:2px}
 #menuBtn{pointer-events:auto;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:10px;padding:4px 10px;font:inherit;font-size:14px;cursor:pointer}
-#diraModeBtn{pointer-events:auto;background:rgba(10,35,30,.82);border:1px solid rgba(143,240,176,.65);color:#caffd9;border-radius:10px;padding:5px 9px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;touch-action:manipulation}
-#diraModeBtn.off{background:rgba(55,20,28,.82);border-color:rgba(255,91,110,.65);color:#ffc3cb}
 #killBar{position:absolute;left:8px;right:8px;top:70px;height:6px;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden;pointer-events:none}
 #killBar i{display:block;height:100%;width:0;background:var(--ok)}
-#bub{position:absolute;background:#fff;color:#0a1830;font-size:12px;font-weight:700;padding:5px 9px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;transform:translate(-50%,-100%);max-width:200px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4);border-left:3px solid var(--acc)}
-#bub.show{opacity:1}
 #bomb{position:absolute;right:12px;bottom:12px;width:66px;height:66px;border-radius:50%;background:rgba(255,91,110,.25);border:2px solid rgba(255,91,110,.7);color:#fff;font-size:22px;cursor:pointer;touch-action:manipulation;z-index:2}
 #bomb:disabled{opacity:.35}
 #bomb small{display:block;font-size:11px;font-weight:700}
@@ -69,9 +59,6 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 .dbtn small{display:block;font-size:10px;color:var(--mut);font-weight:500;margin-top:2px}
 .dbtn.on{border-color:var(--acc);background:#22406a}
 #diffRow{grid-template-columns:repeat(2,1fr)}
-#cmds{position:absolute;left:8px;right:84px;bottom:8px;display:flex;gap:4px;z-index:2}
-.cmd{flex:1;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;padding:8px 0;font:inherit;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation}
-.cmd.on{border-color:var(--acc);background:rgba(34,64,106,.9)}
 #tension{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,transparent 40%,rgba(255,0,40,.6) 100%);opacity:0;z-index:1}
 #tension.on{animation:pulse .8s infinite}
 @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
@@ -81,7 +68,6 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 @keyframes shk{0%{transform:translate(0,0)}50%{transform:translate(2px,-2px)}100%{transform:translate(-2px,2px)}}
 #hud{text-shadow:0 0 6px #4cc2ff,0 0 2px #000}
 #banner{text-shadow:0 0 14px #ff2b5e,0 0 4px #000}
-#bub{box-shadow:0 0 14px rgba(76,194,255,.6)}
 #log{text-shadow:0 0 4px #4cc2ff,0 0 2px #000}
 </style>
 </head>
@@ -107,7 +93,6 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
     <button class="btn main" onclick="openCampaign()">🗺️ Campaign (50 stage)</button>
     <button class="btn" onclick="openKarakterScreen()">🧑‍✈️ Karakter<small>Info stat pesawat dan wingman</small></button>
     <button class="btn" onclick="openUpgrade()">⬆️ Upgrade<small>Bagikan poin stat</small></button>
-    <button class="btn" onclick="openChat()">💬 Chat Kapten Dira<small>Ngobrol sama wingman-mu</small></button>
     <div class="card" style="margin-top:14px">
       <div style="font-size:12px;color:var(--mut)">Server AI</div>
       <div class="chatrow" style="margin-top:4px">
@@ -163,40 +148,19 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
     <button class="btn back" onclick="showScr('scrMain')">← Kembali</button>
   </div>
 
-  <!-- CHAT -->
-  <div id="scrChat" class="scr">
-    <h1>💬 Kapten Dira</h1>
-    <div class="sub">Ngobrol santai atau minta laporan</div>
-    <div id="chatLog"></div>
-    <div class="chatrow">
-      <input type="text" id="chatIn" placeholder="Tulis pesanmu..." onkeydown="if(event.key==='Enter')sendChat()">
-      <button id="bSend" onclick="sendChat()">Kirim</button>
-    </div>
-    <button class="btn back" onclick="showScr('scrMain')">← Kembali</button>
-  </div>
-
   <!-- BATTLE -->
   <div id="scrBattle" class="scr" style="padding:0">
     <div id="world">
       <canvas id="cv"></canvas>
       <div id="hud">
         <div class="l"><span id="hStage"></span><span id="hLvl"></span></div>
-        <div style="display:flex;gap:6px;pointer-events:auto"><button id="diraModeBtn" onclick="toggleDiraAI()">🤖 AI: ON</button><button id="menuBtn" onclick="quitBattle()">☰</button></div>
+        <button id="menuBtn" onclick="quitBattle()">☰</button>
       </div>
       <div id="killBar"><i id="kbFill"></i></div>
-      <div id="bub"></div>
       <div id="tension"></div>
       <div id="banner"></div>
       <div id="log"></div>
       <button id="bomb" onclick="useBomb()">💣<small id="bombTxt">x1</small></button>
-      <div id="cmds">
-        <button class="cmd" data-cmd="kiri" onclick="setCmd('kiri')">⬅️ Kiri</button>
-        <button class="cmd" data-cmd="tengah" onclick="setCmd('tengah')">⬆️ Tengah</button>
-        <button class="cmd" data-cmd="kanan" onclick="setCmd('kanan')">➡️ Kanan</button>
-        <button class="cmd on" data-cmd="ikuti" onclick="setCmd('ikuti')">🔁 Ikuti</button>
-        <button class="cmd" data-cmd="boss" onclick="setCmd('boss')">👑 Serang bos</button>
-      </div>
-
       <div id="overLost" class="ov">
         <div class="ov-box">
           <h2>Pesawat jatuh</h2>
@@ -408,7 +372,7 @@ function gainXp(n) {
     save.pts += 2;
     log(`⭐ Naik ke level ${save.lvl}! +2 poin stat`);
     sfx('lvl');
-    dirEvent(`pemain naik ke level ${save.lvl}`, false);
+
   }
   if (save.lvl >= MAX_LVL) save.xp = 0;
   saveGame();
@@ -429,88 +393,8 @@ function derived() {
 }
 
 /* ===== KOMANDO KAPTEN DIRA (wingman, serius) ===== */
-const SYS_DIRA = 'Kamu Kapten Dira, wingman di pertempuran udara. Sifatmu serius, tegas, dan taktis. Balas 1 kalimat pendek bahasa Indonesia formal (maksimal 10 kata). Jangan pakai tanda kutip.';
-const SYS_CHAT = 'Kamu Kapten Dira, wingman setia pemain. Sifatmu serius tapi hangat dan menghargai pemain. Balas 1 kalimat pendek bahasa Indonesia formal (maksimal 15 kata). Jangan pakai tanda kutip.';
-let pendingEv = null, aiBusy = false, lastAi = 0;
-
-function dirEvent(ev, urgent) {
-  if (urgent || !pendingEv || !pendingEv.urgent) pendingEv = { text: ev, urgent: !!urgent };
-}
-
-async function sendDira() {
-  const ev = pendingEv;
-  pendingEv = null;
-  aiBusy = true;
-  lastAi = Date.now();
-  try {
-    const reply = await askLocalAI([
-      { role: 'system', content: SYS_DIRA },
-      { role: 'user', content: `Situasi: ${ev.text}. HP pesawat ${Math.round(pl ? pl.hp : 0)}, gelombang ${stage}.` }
-    ]);
-    const clean = reply.replace(/[\r\n]+/g, ' ').replace(/^["'\s]+|["'\s]+$/g, '').trim();
-    if (clean && inBattle) { showBubble(clean); log('🎖️ Dira: ' + clean); }
-  } catch (e) {
-    console.log('Error Dira:', e);
-  } finally {
-    aiBusy = false;
-  }
-}
-
-function flushDira() {
-  if (!pendingEv || aiBusy || chatBusy) return;
-  const wait = pendingEv.urgent ? 2500 : 6000;
-  if (Date.now() - lastAi > wait) sendDira();
-}
-
-let bubTimer = null;
-function showBubble(text) {
-  const b = document.getElementById('bub');
-  b.textContent = text;
-  b.classList.add('show');
-  clearTimeout(bubTimer);
-  bubTimer = setTimeout(() => b.classList.remove('show'), 4500);
-}
-
-/* ===== CHAT ===== */
-let chatBusy = false;
-
-function addChat(who, text) {
-  const c = document.getElementById('chatLog');
-  c.innerHTML += `<div><b>${who}:</b> ${text}</div>`;
-  c.scrollTop = c.scrollHeight;
-}
-
-function openChat() {
-  showScr('scrChat');
-  const c = document.getElementById('chatLog');
-  if (!c.dataset.started) {
-    c.dataset.started = '1';
-    addChat('Dira', 'Siap melapor, Kapten. Ada yang mau dibahas?');
-  }
-}
-
-async function sendChat() {
-  const input = document.getElementById('chatIn');
-  const text = input.value.trim();
-  if (!text || chatBusy || aiBusy) return;
-  input.value = '';
-  chatBusy = true;
-  document.getElementById('bSend').disabled = true;
-  addChat('Kamu', text);
-  try {
-    const reply = await askLocalAI([
-      { role: 'system', content: SYS_CHAT },
-      { role: 'user', content: `Pemain bilang: ${text}. Pemain level ${save.lvl}, sudah tamat ${save.cleared} stage.` }
-    ]);
-    const clean = reply.replace(/[\r\n]+/g, ' ').replace(/^["'\s]+|["'\s]+$/g, '').trim();
-    if (clean) addChat('Dira', clean);
-  } catch (e) {
-    addChat('Sistem', '(gagal terhubung ke server)');
-  } finally {
-    chatBusy = false;
-    document.getElementById('bSend').disabled = false;
-  }
-}
+// Sistem komentar AI Dira dihapus.
+function dirEvent() {}
 
 /* ===== LOG ===== */
 function log(msg) {
@@ -649,11 +533,9 @@ let stage = 1, time = 0, kills = 0, target = 0, spawned = 0, spawnCd = 0;
 let bombs = 1, lowWarned = false, touching = false, tx = 0, ty = 0;
 let bossSpawned = false, bossIdx = 0, wonStage = false, lostStage = false;
 let runXp = 0;
-let cmd = 'ikuti';
-// Hybrid: AI memilih tindakan sendiri; perintah manual mendapat prioritas sementara.
-let diraAiEnabled = true, diraAiCmd = 'ikuti', diraAiBusy = false;
-let diraAiLastRequest = 0, diraManualUntil = 0, diraAiProtectUntil = 0;
-const DIRA_AI_INTERVAL = 9000, DIRA_MANUAL_OVERRIDE = 12000;
+let diraAiBusy = false, diraAiLastRequest = 0;
+let diraPlan = 'hunt_nearest', diraSweepDir = 1;
+const DIRA_AI_INTERVAL = 6500;
 let swarm = { state: 'idle', timer: 0, left: 0, done: false };
 let trail = [];
 let parts = [];
@@ -708,10 +590,7 @@ function startStage(n) {
   bombs = 1;
   bossSpawned = false; bossDone = false; bossIdx = Math.floor(n / 5) - 1;
   wonStage = false; lostStage = false; paused = false; started = true;
-  cmd = 'ikuti';
-  diraAiCmd = 'ikuti'; diraAiProtectUntil = 0; diraManualUntil = 0;
-  diraAiLastRequest = 0; diraAiBusy = false;
-  highlightCmd();
+  diraPlan = 'hunt_nearest'; diraAiLastRequest = 0; diraAiBusy = false; diraSweepDir = 1;
   swarm = { state: 'idle', timer: 0, left: 0, done: false };
   setTension(false);
   runXp = 0;
@@ -720,7 +599,7 @@ function startStage(n) {
   document.getElementById('overWin').classList.remove('show');
   document.getElementById('log').innerHTML = '';
   pendingEv = null;
-  dirEvent(`stage ${n} dimulai`, false);
+
   log(`🌊 Stage ${n}: ${stageName(n)}`);
   if (n % 5 === 0) spawnBoss();
   if (n > 1 && (n - 1) % 10 === 0) showBanner('🌍 ' + ZONES[Math.min(4, Math.floor((n - 1) / 10))]);
@@ -763,7 +642,7 @@ function spawnBoss() {
   boss = { ic: b.ic, n: b.n, x: W / 2, y: -90, hp, max: hp, t: 0, fireCd: 1.6 };
   bossSpawned = true;
   sfx('boss');
-  dirEvent(`boss ${b.n} muncul di depan kita`, true);
+
   log(`⚠️ BOSS ${b.n} muncul!`);
 }
 
@@ -820,37 +699,44 @@ function update(dt) {
     for (const off of shots) bullets.push({ x: pl.x + off, y: pl.y - 20, vx: off * 2, vy: -520, dmg: pl.atk });
   }
 
-  // Kapten Dira: immortal, bergerak dan menembak sendiri, pasang badan
+  // Dira hidup mandiri: memilih target dan jalur sendiri, tidak terikat posisi pemain.
   dira.t += dt;
-  const threat = eBullets.some(b => b.vy > 0 && b.y < pl.y && b.y > pl.y - 170 && Math.abs(b.x - pl.x) < 36);
-  let gx, gy;
-  const activeCmd = activeDiraCommand();
-  const aiProtect = diraAiEnabled && Date.now() >= diraManualUntil && Date.now() < diraAiProtectUntil;
-  const bossCmd = activeCmd === 'boss' && boss;
-  if (threat || aiProtect) {
-    gx = pl.x; gy = pl.y - 40;
-    if (!flags.shield) { flags.shield = true; dirEvent('Dira pasang badan di depan pesawat', false); log('🛡️ Dira pasang badan'); }
-  } else if (activeCmd === 'kiri') {
-    gx = pl.x - 52; gy = pl.y + 26; flags.shield = false;
-  } else if (activeCmd === 'kanan') {
-    gx = pl.x + 52; gy = pl.y + 26; flags.shield = false;
-  } else if (activeCmd === 'tengah') {
-    gx = W / 2; gy = H * 0.45; flags.shield = false;
-  } else if (bossCmd) {
-    const a = dira.t * 0.8;
-    gx = boss.x + Math.cos(a) * 150; gy = boss.y + 110 + Math.sin(a) * 30; flags.shield = false;
-  } else {
-    gx = pl.x - 52; gy = pl.y + 26 + Math.sin(dira.t * 3) * 14; flags.shield = false;
-  }
-  dira.x += (gx - dira.x) * Math.min(1, dt * 6);
-  dira.y += (gy - dira.y) * Math.min(1, dt * 6);
-  dira.fireCd -= dt;
-  if (dira.fireCd <= 0) {
-    const tgt = bossCmd ? boss : (enemies.length ? [...enemies].sort((a, b) => dist(a, dira) - dist(b, dira))[0] : null);
-    if (tgt && tgt.y < dira.y) {
-      dira.fireCd = pl.fireBase;
-      const dx = tgt.x - dira.x, dy = tgt.y - dira.y, d = Math.hypot(dx, dy) || 1;
-      bullets.push({ x: dira.x, y: dira.y - 16, vx: dx / d * 480, vy: dy / d * 480, dmg: pl.atk * 0.5 });
+  const plan = diraPlan;
+  let gx = W * 0.5, gy = H * 0.42;
+  const validTargets = enemies.filter(en => en && en.y > -20);
+  const nearestEnemy = validTargets.length ? validTargets.reduce((a,b) => !a || dist(b,dira) < dist(a,dira) ? b : a, null) : null;
+  const strongestEnemy = validTargets.length ? validTargets.reduce((a,b) => !a || b.hp > a.hp ? b : a, null) : null;
+  const nearestItem = items.length ? items.reduce((a,b) => !a || dist(b,dira) < dist(a,dira) ? b : a, null) : null;
+  const targetEnemy = plan === 'hunt_strongest' ? strongestEnemy : nearestEnemy;
+  if (plan === 'hunt_boss' && boss) { gx = boss.x + Math.sin(dira.t*1.1)*62; gy = boss.y+92; }
+  else if (plan === 'collect_item' && nearestItem) { gx=nearestItem.x; gy=nearestItem.y+12; }
+  else if ((plan==='flank_left'||plan==='flank_right')&&(boss||targetEnemy)) {
+    const t=boss||targetEnemy; gx=t.x+(plan==='flank_left'?-82:82); gy=t.y+82;
+  } else if (plan==='sweep') {
+    gx=diraSweepDir>0?W*.82:W*.18; gy=H*.38+Math.sin(dira.t*1.4)*38;
+    if(Math.abs(dira.x-gx)<22)diraSweepDir*=-1;
+  } else if(plan==='evade_fire') {
+    const danger=eBullets.filter(b=>Math.hypot(b.x-dira.x,b.y-dira.y)<150);
+    const leftDanger=danger.filter(b=>b.x<dira.x).length, rightDanger=danger.length-leftDanger;
+    gx=clamp(dira.x+(leftDanger>rightDanger?120:-120),28,W-28); gy=clamp(dira.y-70,55,H-100);
+  } else if(targetEnemy) { gx=targetEnemy.x+Math.sin(dira.t*1.7)*24; gy=targetEnemy.y+78; }
+  else if(boss) { gx=boss.x; gy=boss.y+92; }
+  else { gx=W*(.25+.5*(.5+.5*Math.sin(dira.t*.7))); gy=H*.42+Math.sin(dira.t*1.3)*42; }
+  gx=clamp(gx,26,W-26); gy=clamp(gy,55,H-75);
+  dira.x+=(gx-dira.x)*Math.min(1,dt*3.8); dira.y+=(gy-dira.y)*Math.min(1,dt*3.8);
+
+  // Dira memilih sasaran tembaknya sendiri.
+  dira.fireCd-=dt;
+  if(dira.fireCd<=0) {
+    let tgt=null;
+    if(plan==='hunt_boss'&&boss)tgt=boss;
+    else if(plan==='hunt_strongest'&&strongestEnemy)tgt=strongestEnemy;
+    else if(boss&&!nearestEnemy)tgt=boss;
+    else tgt=nearestEnemy||boss;
+    if(tgt&&tgt.y<dira.y) {
+      dira.fireCd=Math.max(.16,pl.fireBase*.9);
+      const dx=tgt.x-dira.x,dy=tgt.y-dira.y,d=Math.hypot(dx,dy)||1;
+      bullets.push({x:dira.x,y:dira.y-16,vx:dx/d*520,vy:dy/d*520,dmg:pl.atk*.62});
     }
   }
 
@@ -861,7 +747,7 @@ function update(dt) {
     sfx('warn');
     setTension(true);
     showBanner('⚠️ SERBUAN MASSAL');
-    dirEvent('serbuan massal akan datang, bersiap', true);
+
     log('⚠️ Serbuan massal akan datang!');
   }
   if (swarm.state === 'warn') {
@@ -876,7 +762,7 @@ function update(dt) {
       const w = document.getElementById('world');
       w.classList.add('shake');
       setTimeout(() => w.classList.remove('shake'), 500);
-      dirEvent('serbuan dimulai, tahan posisi', true);
+
     }
   } else if (swarm.state === 'attack') {
     swarm.timer -= dt;
@@ -1008,7 +894,6 @@ function update(dt) {
   }
 
   renderHud();
-  flushDira();
   requestDiraAction();
 }
 
@@ -1017,7 +902,6 @@ const flags = { shield: false };
 
 function bossDown() {
   const name = boss.n;
-  if (cmd === 'boss') { cmd = 'ikuti'; highlightCmd(); }
   burst(boss.x, boss.y, '#ff5b6e', 40);
   boss = null;
   bossDone = true;
@@ -1025,132 +909,59 @@ function bossDown() {
   items.push({ ic: '🔋', x: W / 2, y: 140, vy: 50 });
   items.push({ ic: '💣', x: W / 2 + 30, y: 140, vy: 50 });
   log(`🏆 ${name} tumbang!`);
-  dirEvent(`boss ${name} berhasil dihancurkan`, true);
+
 }
 
 const SYS_DIRA_ACTION = [
-  'You are the autonomous wingman in a vertical shooter game.',
-  'Read the game state and choose exactly one useful action.',
-  'Allowed actions: follow, left, center, right, attack_boss, protect.',
-  'Use attack_boss only when a boss is present. Use protect when the player is in danger.',
-  'Return ONLY one JSON object. The action value must be exactly one of: follow, left, center, right, attack_boss, protect. Example: {"action":"follow","reason":"player safe"}.',
-  'Do not invent targets, coordinates, weapons, or actions. The game validates and executes your choice.'
+  'You control an independent fighter aircraft in a shooter game.',
+  'You have your own goals. Never follow, escort, protect, or wait for the player.',
+  'Choose a tactical intention from: hunt_nearest, hunt_strongest, flank_left, flank_right, sweep, hunt_boss, collect_item, evade_fire.',
+  'Choose hunt_boss only if a boss exists. Choose collect_item only if an item exists. Choose evade_fire only if bullets are close.',
+  'Return ONLY JSON: {"action":"hunt_nearest","reason":"short reason"}. No other text.'
 ].join(' ');
 
 function parseDiraAction(raw) {
-  const text = String(raw || '').replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-  const start = text.indexOf('{'), end = text.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
+  const s=String(raw||'').replace(/```(?:json)?/gi,'').replace(/```/g,'').trim();
+  const a=s.indexOf('{'),b=s.lastIndexOf('}'); if(a<0||b<=a)return null;
   try {
-    const obj = JSON.parse(text.slice(start, end + 1));
-    const allowed = ['follow', 'left', 'center', 'right', 'attack_boss', 'protect'];
-    return obj && allowed.includes(String(obj.action || '').toLowerCase())
-      ? { action: String(obj.action).toLowerCase(), reason: String(obj.reason || '').slice(0, 80) }
-      : null;
-  } catch (e) { return null; }
+    const o=JSON.parse(s.slice(a,b+1));
+    const allowed=['hunt_nearest','hunt_strongest','flank_left','flank_right','sweep','hunt_boss','collect_item','evade_fire'];
+    return o&&allowed.includes(String(o.action||'').toLowerCase())?String(o.action).toLowerCase():null;
+  } catch(e){return null;}
 }
-
 function diraGameState() {
-  const nearest = enemies.length
-    ? enemies.reduce((best, en) => !best || dist(en, pl) < dist(best, pl) ? en : best, null)
-    : null;
-  const incoming = eBullets.filter(b => b.vy > 0 && b.y < pl.y && b.y > pl.y - 190 && Math.abs(b.x - pl.x) < 90).length;
-  return {
-    stage,
-    player: {
-      hp_percent: Math.round(clamp(pl.hp / pl.max, 0, 1) * 100),
-      x_zone: pl.x < W / 3 ? 'left' : pl.x > W * 2 / 3 ? 'right' : 'center',
-      incoming_bullets_nearby: incoming
-    },
-    enemies: { count: enemies.length, nearest_type: nearest ? nearest.type : 'none', nearest_distance: nearest ? Math.round(dist(nearest, pl)) : null },
-    boss: boss ? { present: true, hp_percent: Math.round(clamp(boss.hp / boss.max, 0, 1) * 100) } : { present: false },
-    enemy_bullets: eBullets.length,
-    current_manual_order: Date.now() < diraManualUntil ? cmd : 'none'
-  };
+  const nearest=enemies.length?enemies.reduce((a,b)=>!a||dist(b,dira)<dist(a,dira)?b:a,null):null;
+  const strongest=enemies.length?enemies.reduce((a,b)=>!a||b.hp>a.hp?b:a,null):null;
+  const nearestItem=items.length?items.reduce((a,b)=>!a||dist(b,dira)<dist(a,dira)?b:a,null):null;
+  const nearbyBullets=eBullets.filter(b=>Math.hypot(b.x-dira.x,b.y-dira.y)<150).length;
+  return {stage,dira:{x_zone:dira.x<W/3?'left':dira.x>W*2/3?'right':'center',current_plan:diraPlan},
+    threats:{enemies:enemies.length,nearest_enemy:nearest?nearest.type:'none',strongest_enemy:strongest?strongest.type:'none',nearby_enemy_bullets:nearbyBullets},
+    boss:boss?{present:true,hp_percent:Math.round(clamp(boss.hp/boss.max,0,1)*100)}:{present:false},
+    items:items.length,nearest_item:nearestItem?nearestItem.ic:'none',
+    player:{hp_percent:Math.round(clamp(pl.hp/pl.max,0,1)*100),x_zone:pl.x<W/3?'left':pl.x>W*2/3?'right':'center'}};
 }
-
+function fallbackDiraPlan(state) {
+  if(state.boss.present&&Math.random()<.62)return 'hunt_boss';
+  if(state.threats.nearby_enemy_bullets>=3)return 'evade_fire';
+  if(state.items>0&&Math.random()<.3)return 'collect_item';
+  const options=['hunt_nearest','hunt_strongest','flank_left','flank_right','sweep'].filter(x=>x!==diraPlan);
+  return options[Math.floor(Math.random()*options.length)]||'hunt_nearest';
+}
 async function requestDiraAction() {
-  if (!diraAiEnabled || !inBattle || !started || paused || wonStage || lostStage) return;
-  if (diraAiBusy || aiBusy || chatBusy || Date.now() - diraAiLastRequest < DIRA_AI_INTERVAL) return;
-  if (Date.now() < diraManualUntil) return;
-  diraAiBusy = true;
-  diraAiLastRequest = Date.now();
+  if(!inBattle||!started||paused||wonStage||lostStage)return;
+  if(diraAiBusy||Date.now()-diraAiLastRequest<DIRA_AI_INTERVAL)return;
+  diraAiBusy=true; diraAiLastRequest=Date.now(); const state=diraGameState();
   try {
-    const state = diraGameState();
-    const raw = await askLocalAI([
-      { role: 'system', content: SYS_DIRA_ACTION },
-      { role: 'user', content: 'Choose the next wingman action for this game state.\nGAME_STATE: ' + JSON.stringify(state) }
-    ], 100);
-    if (!inBattle || !started || wonStage || lostStage || !diraAiEnabled || Date.now() < diraManualUntil) return;
-    const decision = parseDiraAction(raw);
-    if (!decision) {
-      console.warn('Dira action output was not valid JSON:', raw);
-      return;
-    }
-    const map = { follow: 'ikuti', left: 'kiri', center: 'tengah', right: 'kanan', attack_boss: 'boss' };
-    if (decision.action === 'attack_boss' && !boss) decision.action = 'follow';
-    if (decision.action === 'protect') {
-      diraAiProtectUntil = Date.now() + 4500;
-      diraAiCmd = 'ikuti';
-    } else {
-      diraAiProtectUntil = 0;
-      diraAiCmd = map[decision.action] || 'ikuti';
-    }
-    highlightCmd();
-    log('🤖 Dira AI: ' + decision.action + (decision.reason ? ' · ' + decision.reason : ''));
-  } catch (e) {
-    console.warn('Dira action request failed:', e);
-  } finally {
-    diraAiBusy = false;
-  }
-}
-
-function activeDiraCommand() {
-  return diraAiEnabled && Date.now() >= diraManualUntil ? diraAiCmd : cmd;
-}
-
-function updateDiraModeUI() {
-  const b = document.getElementById('diraModeBtn');
-  if (!b) return;
-  b.textContent = diraAiEnabled ? '🤖 AI: ON' : '✋ AI: OFF';
-  b.classList.toggle('off', !diraAiEnabled);
-  b.title = diraAiEnabled ? 'AI aktif; tombol manual mengambil alih selama 12 detik' : 'Mode manual; tekan untuk mengaktifkan AI';
-}
-
-function toggleDiraAI() {
-  diraAiEnabled = !diraAiEnabled;
-  diraManualUntil = 0;
-  if (diraAiEnabled) {
-    diraAiLastRequest = 0;
-    log('🤖 Dira mengambil keputusan sendiri. Perintah manual tetap bisa dipakai.');
-  } else {
-    diraAiProtectUntil = 0;
-    log('✋ Mode manual aktif. Dira menunggu tombol perintah.');
-  }
-  updateDiraModeUI();
-  highlightCmd();
-}
-
-function highlightCmd() {
-  const active = activeDiraCommand();
-  document.querySelectorAll('.cmd').forEach(b => b.classList.toggle('on', b.dataset.cmd === active));
-  updateDiraModeUI();
-}
-
-const CMD_LABEL = { kiri: 'kiri', tengah: 'tengah', kanan: 'kanan', ikuti: 'ikuti', boss: 'serang bos' };
-
-function setCmd(c) {
-  if (!inBattle || !started || wonStage || lostStage) return;
-  if (c === 'boss' && !boss) {
-    log('Boss belum muncul.');
-    dirEvent('perintah serang bos ditolak, boss belum muncul', false);
-    return;
-  }
-  cmd = c;
-  if (diraAiEnabled) diraManualUntil = Date.now() + DIRA_MANUAL_OVERRIDE;
-  highlightCmd();
-  log(`🎖️ Perintah manual: ${CMD_LABEL[c]}${diraAiEnabled ? ' (prioritas 12 detik)' : ''}`);
-  dirEvent(`perintah ${CMD_LABEL[c]} diterima`, true);
+    const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your own next tactical goal. GAME_STATE: '+JSON.stringify(state)}],80);
+    if(!inBattle||!started||wonStage||lostStage)return;
+    let action=parseDiraAction(raw); if(!action)action=fallbackDiraPlan(state);
+    if(action==='hunt_boss'&&!boss)action='hunt_nearest';
+    if(action==='collect_item'&&!items.length)action=fallbackDiraPlan(state);
+    if(action==='evade_fire'&&!state.threats.nearby_enemy_bullets)action=fallbackDiraPlan(state);
+    diraPlan=action; if(action==='sweep')diraSweepDir*=-1;
+  } catch(e) {
+    console.warn('Dira autonomous decision failed:',e); diraPlan=fallbackDiraPlan(state);
+  } finally { diraAiBusy=false; }
 }
 
 function damagePlayer(d) {
@@ -1171,7 +982,7 @@ function useBomb() {
   if (boss) boss.hp -= 60 * stageMul();
   pl.inv = 2;
   log('💣 Bom dijatuhkan!');
-  dirEvent('bom dijatuhkan, musuh terkena serangan', false);
+
   enemies = enemies.filter(en => {
     if (en.hp <= 0) { killEnemy(en); return false; }
     return true;
@@ -1184,7 +995,7 @@ function loseStage() {
   lostStage = true;
   sfx('lose');
   log('💀 Pesawat jatuh');
-  dirEvent('pesawat utama jatuh', true);
+
   document.getElementById('overLost').classList.add('show');
 }
 
@@ -1200,7 +1011,7 @@ function clearStage() {
   document.getElementById('btnNext').textContent = stage >= MAX_STAGE ? 'Campaign selesai' : 'Stage berikutnya';
   document.getElementById('btnNext').disabled = stage >= MAX_STAGE;
   document.getElementById('overWin').classList.add('show');
-  dirEvent(`stage ${stage} berhasil diselesaikan`, true);
+
 }
 
 /* ===== GAMBAR (NEON) ===== */
