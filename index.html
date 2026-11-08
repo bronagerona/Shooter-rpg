@@ -195,9 +195,8 @@ function apiRoot() { return document.getElementById('serverUrl').value.trim().re
 async function askLocalAI(messages, maxTokens = 40) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
-  let res;
   try {
-    res = await fetch(apiRoot() + '/v1/chat/completions', {
+    const res = await fetch(apiRoot() + '/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
@@ -208,13 +207,16 @@ async function askLocalAI(messages, maxTokens = 40) {
         max_tokens: maxTokens
       })
     });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    // Timeout tetap aktif sampai seluruh body JSON selesai dibaca.
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content || '';
   } catch (e) {
-    if (e.name === "AbortError") throw new Error("Waktu tunggu Gemma habis (25 detik)");
+    if (e.name === "AbortError") throw new Error("Gemma tidak selesai menjawab dalam 25 detik");
     throw e;
-  } finally { clearTimeout(timeout); }
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  return data?.choices?.[0]?.message?.content || '';
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function setAIStatus(state, detail = "") {
@@ -606,8 +608,8 @@ function startStage(n) {
   if (save.lvl === undefined) return;
   stage = n;
   inBattle = true;
-  setAIStatus("checking");
-  testAI();
+  // Tes koneksi terpisah bisa menimpa status keputusan Gemma.
+  setAIStatus("busy");
   showScr('scrBattle');
   resizeCanvas();
   const d = derived();
@@ -983,7 +985,6 @@ async function requestDiraAction() {
   setAIStatus("busy");
   try {
     const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your own next tactical goal. GAME_STATE: '+JSON.stringify(state)}],80);
-    setAIStatus("online");
     if(!inBattle||!started||wonStage||lostStage)return;
     let action=parseDiraAction(raw);
     if(!action) {
