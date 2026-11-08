@@ -1033,7 +1033,7 @@ const SYS_DIRA_ACTION = [
   'Read the game state and choose exactly one useful action.',
   'Allowed actions: follow, left, center, right, attack_boss, protect.',
   'Use attack_boss only when a boss is present. Use protect when the player is in danger.',
-  'Return ONLY one JSON object: {"action":"follow|left|center|right|attack_boss|protect","reason":"short reason"}.',
+  'Return ONLY one JSON object. The action value must be exactly one of: follow, left, center, right, attack_boss, protect. Example: {"action":"follow","reason":"player safe"}.',
   'Do not invent targets, coordinates, weapons, or actions. The game validates and executes your choice.'
 ].join(' ');
 
