@@ -42,6 +42,10 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
 #cv{display:block;width:100%;height:100%;touch-action:none}
 #hud{position:absolute;left:8px;right:8px;top:8px;display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000;pointer-events:none}
 #hud .l{display:flex;flex-direction:column;gap:2px}
+#aiBattleStatus{position:absolute;left:0;top:42px;padding:4px 8px;border:1px solid rgba(255,255,255,.22);border-radius:8px;background:rgba(0,0,0,.62);font-size:10px;line-height:1.2;color:#ffd166;text-shadow:0 1px 2px #000;pointer-events:none}
+#aiBattleStatus.online{color:#8ff0b0;border-color:rgba(143,240,176,.5)}
+#aiBattleStatus.busy{color:#ffd166;border-color:rgba(255,209,102,.5)}
+#aiBattleStatus.offline{color:#ff8a8a;border-color:rgba(255,138,138,.5)}
 #menuBtn{pointer-events:auto;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:10px;padding:4px 10px;font:inherit;font-size:14px;cursor:pointer}
 #killBar{position:absolute;left:8px;right:8px;top:70px;height:6px;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden;pointer-events:none}
 #killBar i{display:block;height:100%;width:0;background:var(--ok)}
@@ -154,6 +158,7 @@ h1{font-size:22px;margin:6px 0 2px;color:#bfe6ff;text-align:center}
       <canvas id="cv"></canvas>
       <div id="hud">
         <div class="l"><span id="hStage"></span><span id="hLvl"></span></div>
+        <div id="aiBattleStatus" class="offline">AI Dira: BELUM DICEK</div>
         <button id="menuBtn" onclick="quitBattle()">☰</button>
       </div>
       <div id="killBar"><i id="kbFill"></i></div>
@@ -203,18 +208,31 @@ async function askLocalAI(messages, maxTokens = 40) {
   return data?.choices?.[0]?.message?.content || '';
 }
 
+function setAIStatus(state, detail = "") {
+  const menu = document.getElementById("aiStatus");
+  const battle = document.getElementById("aiBattleStatus");
+  const info = {
+    checking: ["Menguji server AI...", "AI Dira: MEMERIKSA", "busy"],
+    busy: ["Gemma sedang berpikir...", "AI Dira: BERPIKIR…", "busy"],
+    online: ["Terhubung ✓ Model: " + (detail || "default"), "AI Dira: TERHUBUNG ✓", "online"],
+    offline: ["Gagal koneksi: " + (detail || "server tidak merespons"), "AI Dira: TERPUTUS ✕", "offline"]
+  }[state];
+  if (!info) return;
+  if (menu) { menu.textContent = info[0]; menu.style.color = state === "online" ? "#8ff0b0" : state === "offline" ? "#ff8a8a" : "#ffd166"; }
+  if (battle) { battle.textContent = info[1]; battle.className = info[2]; }
+}
+
 async function testAI() {
-  const st = document.getElementById('aiStatus');
-  st.textContent = "Menguji server AI...";
+  setAIStatus("checking");
   try {
     const res = await fetch(apiRoot() + '/v1/models');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
-    st.textContent = "Terhubung ✓ Model: " + (d?.data?.[0]?.id || 'default');
-    st.style.color = "#8ff0b0";
+    setAIStatus("online", d?.data?.[0]?.id || "default");
+    return true;
   } catch (e) {
-    st.textContent = "Gagal koneksi: " + e.message;
-    st.style.color = "#ff8a8a";
+    setAIStatus("offline", e.message);
+    return false;
   }
 }
 
@@ -577,6 +595,8 @@ function startStage(n) {
   if (save.lvl === undefined) return;
   stage = n;
   inBattle = true;
+  setAIStatus("checking");
+  testAI();
   showScr('scrBattle');
   resizeCanvas();
   const d = derived();
@@ -949,8 +969,10 @@ async function requestDiraAction() {
   if(!inBattle||!started||paused||wonStage||lostStage)return;
   if(diraAiBusy||Date.now()-diraAiLastRequest<DIRA_AI_INTERVAL)return;
   diraAiBusy=true; diraAiLastRequest=Date.now(); const state=diraGameState();
+  setAIStatus("busy");
   try {
     const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your own next tactical goal. GAME_STATE: '+JSON.stringify(state)}],80);
+    setAIStatus("online");
     if(!inBattle||!started||wonStage||lostStage)return;
     let action=parseDiraAction(raw); if(!action)action=fallbackDiraPlan(state);
     if(action==='hunt_boss'&&!boss)action='hunt_nearest';
@@ -958,7 +980,7 @@ async function requestDiraAction() {
     if(action==='evade_fire'&&!state.threats.nearby_enemy_bullets)action=fallbackDiraPlan(state);
     diraPlan=action; if(action==='sweep')diraSweepDir*=-1;
   } catch(e) {
-    console.warn('Dira autonomous decision failed:',e); diraPlan=fallbackDiraPlan(state);
+    console.warn('Dira autonomous decision failed:',e); setAIStatus("offline", e.message); diraPlan=fallbackDiraPlan(state);
   } finally { diraAiBusy=false; }
 }
 
