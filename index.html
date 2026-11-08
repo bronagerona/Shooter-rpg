@@ -227,7 +227,8 @@ async function askLocalAI(messages, maxTokens = 12) {
     // Beberapa build llama.cpp/Gemma menaruh teks di field selain message.content.
     const content = [
       message.content, message.reasoning_content, message.analysis,
-      message.reasoning, choice.text
+      message.reasoning, message.refusal, choice.text,
+      ...(Array.isArray(message.tool_calls) ? message.tool_calls.map(call => (call && call.function && (call.function.arguments || call.function.name)) || '') : [])
     ].map(readText).filter(Boolean).join('\n').trim();
     if (content) return content;
     throw new Error('Respons model kosong/tidak berisi teks: ' + JSON.stringify({
@@ -980,35 +981,51 @@ const SYS_DIRA_ACTION = [
 ].join(' ');
 
 function parseDiraAction(raw) {
-  const s=String(raw||'').toLowerCase()
-    .replace(/```(?:json)?/gi,'').replace(/```/g,'')
-    .replace(/[-\\s]+/g,'_').trim();
-  for (const action of DIRA_ACTIONS) {
-    if (new RegExp('(^|[^a-z_])'+action+'([^a-z_]|$)','i').test(s)) return action;
+  const original = String(raw || '').trim();
+  if (!original) return null;
+  const fence = new RegExp(String.fromCharCode(96).repeat(3) + '(?:json|text)?', 'gi');
+  const clean = original.replace(fence, '').trim();
+  const normalize = value => String(value || '').toLowerCase()
+    .replace(/[\s-]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/^_+|_+$/g, '');
+
+  const jsonStart = clean.indexOf('{');
+  const jsonEnd = clean.lastIndexOf('}');
+  if (jsonStart >= 0 && jsonEnd > jsonStart) {
+    try {
+      const obj = JSON.parse(clean.slice(jsonStart, jsonEnd + 1));
+      for (const key of ['action', 'plan', 'decision', 'choice', 'move', 'content', 'text', 'output']) {
+        const value = obj && obj[key];
+        if (typeof value === 'string') {
+          const candidate = normalize(value);
+          if (DIRA_ACTIONS.includes(candidate)) return candidate;
+        }
+      }
+    } catch (e) {}
   }
-  // Accept short natural-language answers too, not only exact action codes.
+
+  const lower = clean.toLowerCase();
+  for (const action of DIRA_ACTIONS) {
+    if (new RegExp('(^|[^a-z0-9])' + action + '(?=$|[^a-z0-9])', 'i').test(lower)) return action;
+  }
+
   const aliases = [
-    [/\\b(nearest|closest)_enemy\\b|\\battack_nearest\\b|\\btarget_nearest\\b/, 'hunt_nearest'],
-    [/\\b(strongest|toughest|most_dangerous)_enemy\\b|\\battack_strongest\\b/, 'hunt_strongest'],
-    [/\\b(left_flank|flank_left)\\b/, 'flank_left'],
-    [/\\b(right_flank|flank_right)\\b/, 'flank_right'],
-    [/\\bsweep\\b/, 'sweep'],
-    [/\\b(hunt|attack|target)_boss\\b/, 'hunt_boss'],
-    [/\\b(collect|pick_up)_?(item|items|power_up)\\b/, 'collect_item'],
-    [/\\b(dodge|evade|avoid)_?(enemy_)?(fire|bullets)\\b|\\bincoming_bullets\\b/, 'evade_fire']
+    [/(nearest|closest)([\s_-]+)(enemy|target)|(attack|target)([\s_-]+)(nearest|closest)/i, 'hunt_nearest'],
+    [/(strongest|toughest|most_dangerous)([\s_-]+)(enemy|target)|(attack|target)([\s_-]+)(strongest|toughest)/i, 'hunt_strongest'],
+    [/(left)([\s_-]+)(flank)|(flank)([\s_-]+)(left)/i, 'flank_left'],
+    [/(right)([\s_-]+)(flank)|(flank)([\s_-]+)(right)/i, 'flank_right'],
+    [/(sweep|patrol|clear the area)/i, 'sweep'],
+    [/(hunt|attack|target)([\s_-]+)boss|(boss)([\s_-]+)(hunt|attack)/i, 'hunt_boss'],
+    [/(collect|pick[\s_-]?up|grab)([\s_-]+)?(items?|power[\s_-]?ups?)/i, 'collect_item'],
+    [/(dodge|evade|avoid)([\s_-]+)?(enemy[\s_-]+)?(fire|bullets?)|incoming[\s_-]+bullets?/i, 'evade_fire']
   ];
-  for (const [pattern, action] of aliases) if (pattern.test(s)) return action;
-  try {
-    const a=s.indexOf('{'), b=s.lastIndexOf('}');
-    if(a>=0&&b>a) {
-      const o=JSON.parse(s.slice(a,b+1));
-      const action=String(o?.action||'').toLowerCase().replace(/[-\\s]+/g,'_');
-      if(DIRA_ACTIONS.includes(action)) return action;
-    }
-  } catch(e) {}
+  for (const [pattern, action] of aliases) if (pattern.test(clean)) return action;
+
+  const compact = normalize(clean);
+  for (const action of DIRA_ACTIONS) if (compact.includes(action)) return action;
   return null;
 }
-
 function diraGameState() {
   const nearest=enemies.length?enemies.reduce((a,b)=>!a||dist(b,dira)<dist(a,dira)?b:a,null):null;
   const strongest=enemies.length?enemies.reduce((a,b)=>!a||b.hp>a.hp?b:a,null):null;
@@ -1033,7 +1050,7 @@ async function requestDiraAction() {
   diraAiBusy=true; diraAiLastRequest=Date.now(); const state=diraGameState();
   setAIStatus("busy");
   try {
-    const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your next tactical action for this current game state. Return one action code only. GAME_STATE: '+JSON.stringify(state)}],12);
+    const raw=await askLocalAI([{role:'system',content:SYS_DIRA_ACTION},{role:'user',content:'Choose your next tactical action for this current game state. Return one action code only. GAME_STATE: '+JSON.stringify(state)}],32);
     if(!inBattle||!started||wonStage||lostStage)return;
     let action=parseDiraAction(raw);
     if(!action) {
